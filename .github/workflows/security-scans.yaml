@@ -29,6 +29,15 @@ jobs:
   build:
     name: Build and analyze
     runs-on: ubuntu-latest
+    permissions:
+      # Needed to upload the results to code-scanning dashboard.
+      security-events: write
+      # Needed to publish results and get a badge (see publish_results below).
+      id-token: write
+      # Uncomment the permissions below if installing in a private repository.
+      # contents: read
+      # actions: read
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -52,28 +61,7 @@ jobs:
           restore-keys: ${{ runner.os }}-m2
       - name: Build with Maven
         run: mvn --batch-mode clean install "-Ddocker.skip=true"
-        
-  sonatype-lifecycle:
-    name: "Sonatype Lifecycle"
-    # yamllint disable-line rule:line-length
-    uses: lfit/releng-reusable-workflows/.github/workflows/reuse-sonatype-lifecycle.yaml@8c3cf221da0e47955647647c9a254c1f807081ce # v0.2.18
-    secrets:
-      NEXUS_IQ_PASSWORD: ${{ secrets.NEXUS_IQ_PASSWORD }}
-
-
-  # Scan results are found at: https://sonarcloud.io/login
-  sonarqube-cloud:
-    name: "SonarQube Cloud"
-    needs: build
-    # yamllint disable-line rule:line-length
-    uses: lfit/releng-reusable-workflows/.github/workflows/reuse-sonarqube-cloud.yaml@8c3cf221da0e47955647647c9a254c1f807081ce # v0.2.18
-    permissions:
-      # Needed to upload the results to code-scanning dashboard.
-      security-events: write
-      # Needed to publish results and get a badge (see publish_results below).
-      id-token: write
-      # Uncomment the permissions below if installing in a private repository.
-      # contents: read
-      # actions: read
-    secrets:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: Build and analyze
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
